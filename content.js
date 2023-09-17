@@ -1,43 +1,48 @@
-(() => {
-  let youtubeControls, youtubePlayer;
-
-  let currentVideo = "";
-  chrome.runtime.onMessage.addListener((obj, sender, response) => {
-    const { type, videoId } = obj;
-
-    if (type === "NEW") {
-      currentVideo = videoId;
-      newVideoLoaded();
+class YtVideo {
+    constructor() {
+        this.isInitalized = false;
     }
-  });
+    async addSpeedBtn() {
+        if (this.isInitalized) {
+            return;
+        }
 
-  const newVideoLoaded = async () => {
-    const buttonExists = document.getElementsByClassName("speed-btn")[0];
-    if (!buttonExists) {
-      const speedButton = document.createElement("img");
+        this.isInitalized = true;
+        const btn = await fetch(chrome.runtime.getURL("assets/btn.html"))
+            .then((res) => res.text())
+            .then((html) => {
+                const div = document.createElement("div");
+                div.innerHTML = html;
+                div.style.cssText =
+                `align-self: center;
+                display: flex;
+                position: relative;`
 
-      speedButton.src = chrome.runtime.getURL("assets/speed.png");
-      speedButton.className = "speed-btn " + "ytp-btn ytp-button";
-      speedButton.title = "click for 3x speed";
+                return div;
+            });
 
-      youtubeControls = document.getElementsByClassName("ytp-right-controls")[0];
-      youtubePlayer = document.getElementsByClassName("video-stream")[0];
+        let ytp_right_controls =
+            document.getElementsByClassName("ytp-right-controls")[0];
+        let ytp_chrome_controls = document.getElementsByClassName(
+            "ytp-chrome-controls"
+        )[0];
 
-      youtubeControls.prepend(speedButton);
-      speedButton.addEventListener("click",speedUp)
+        ytp_chrome_controls.insertBefore(btn, ytp_right_controls);
+        btn.addEventListener("click", this.#speedUp);
     }
-  };
+    #speedUp() {
+        const videoElem = document.querySelector("video");
+        if (videoElem.playbackRate == 3) {
+            videoElem.playbackRate = 1;
+        } else {
+            videoElem.playbackRate = 3.0;
+        }
+    }
+}
+const ytVideo = new YtVideo();
 
-  const speedUp = () => {
-    console.log("speed")
-    const speeder =document.querySelector('video');
-    if (speeder.playbackRate==3)
-    {
-        speeder.playbackRate=1;
+chrome.runtime.onMessage.addListener((obj, sender, response) => {
+    if (obj && obj.type && obj.type === "NEW") {
+        ytVideo.addSpeedBtn();
     }
-    else{
-    speeder.playbackRate = 3.0;
-    }
-  }
-  newVideoLoaded();
-})();
+});
